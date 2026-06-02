@@ -1,0 +1,24 @@
+---
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+  posts: CollectionEntry<'blog'>[];
+}
+const { posts } = Astro.props;
+const yearOf = (p: CollectionEntry<'blog'>) =>
+  p.data.year ?? String(p.data.pubDate.getFullYear());
+---
+<div class="card-grid">
+  {posts.map((p) => (
+    <a class="card" href={`/${p.id}/`}>
+      {p.data.heroImage && (
+        <div class="card-img">
+          <img src={p.data.heroImage} alt={p.data.title} loading="lazy" />
+        </div>
+      )}
+      <span class="card-year">{yearOf(p)}</span>
+      <h3 class="card-title">{p.data.title}</h3>
+      {p.data.description && <p class="card-excerpt">{p.data.description}</p>}
+    </a>
+  ))}
+</div>

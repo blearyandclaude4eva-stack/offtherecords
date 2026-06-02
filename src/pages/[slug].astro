@@ -1,0 +1,128 @@
+---
+import { getCollection, render } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Comments from '../components/Comments.astro';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('blog');
+  const pages = await getCollection('pages');
+  const postIds = new Set(posts.map((p) => p.id));
+
+  const postPaths = posts.map((entry) => ({
+    params: { slug: entry.id },
+    props: { entry, kind: 'post' as const },
+  }));
+  // Pages share the root namespace; drop any whose slug collides with a post.
+  const pagePaths = pages
+    .filter((entry) => !postIds.has(entry.id))
+    .map((entry) => ({
+      params: { slug: entry.id },
+      props: { entry, kind: 'page' as const },
+    }));
+
+  return [...postPaths, ...pagePaths];
+}
+
+const { entry, kind } = Astro.props;
+const { Content } = await render(entry);
+
+const fmt = (d: Date) =>
+  d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+const data = entry.data as typeof entry.data & {
+  pubDate?: Date;
+  updated?: Date;
+  year?: string;
+  tags?: string[];
+  heroImage?: string;
+  author?: string;
+  artist?: string;
+  song?: string;
+  chartLabel?: string;
+  chartPosition?: string;
+  chartUrl?: string;
+};
+const hasChart = Boolean(data.artist || data.song || data.chartPosition);
+const year = data.year ?? (data.pubDate ? String(data.pubDate.getFullYear()) : undefined);
+---
+<BaseLayout title={data.title} description={data.description}>
+  {kind === 'post' ? (
+    <article class="post">
+      {data.heroImage ? (
+        <div class="post-hero full-bleed has-overlay">
+          <img src={data.heroImage} alt={data.title} />
+          <div class="hero-scrim"></div>
+          <div class="hero-caption">
+            <div class="container">
+              {year && <span class="eyebrow">{year}</span>}
+              <h1>{data.title}</h1>
+              {data.pubDate && (
+                <p class="meta">
+                  <time datetime={data.pubDate.toISOString()}>{fmt(data.pubDate)}</time>
+                  {data.author && <span>&middot; {data.author}</span>}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div class="container">
+          <header class="post-header">
+            {year && <span class="eyebrow">{year}</span>}
+            <h1>{data.title}</h1>
+            {data.pubDate && (
+              <p class="meta">
+                <time datetime={data.pubDate.toISOString()}>{fmt(data.pubDate)}</time>
+                {data.author && <span>&middot; {data.author}</span>}
+              </p>
+            )}
+          </header>
+        </div>
+      )}
+
+      <div class="container">
+        {hasChart && (
+          <aside class="chart-box">
+            {(data.artist || data.song) && (
+              <p class="cb-title">
+                {data.artist && <span class="cb-artist">{data.artist}</span>}
+                {data.song && <span class="cb-song">{data.song}</span>}
+              </p>
+            )}
+            {data.chartPosition && (
+              <p class="cb-chart">
+                {data.chartLabel && <span class="cb-label">{data.chartLabel}</span>}
+                {data.chartUrl ? (
+                  <a href={data.chartUrl}>{data.chartPosition}</a>
+                ) : (
+                  data.chartPosition
+                )}
+              </p>
+            )}
+          </aside>
+        )}
+
+        <div class="prose">
+          <Content />
+        </div>
+
+        {data.tags && data.tags.length > 0 && (
+          <footer class="post-tags">
+            {data.tags.map((t) => <span class="tag">{t}</span>)}
+          </footer>
+        )}
+
+        <Comments slug={entry.id} />
+
+        <p class="back"><a href="/">&larr; Archive</a></p>
+      </div>
+    </article>
+  ) : (
+    <div class="container page-body">
+      <h1>{data.title}</h1>
+      <div class="prose">
+        <Content />
+      </div>
+      <p class="back"><a href="/">&larr; Archive</a></p>
+    </div>
+  )}
+</BaseLayout>

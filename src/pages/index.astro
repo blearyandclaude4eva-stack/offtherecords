@@ -1,0 +1,34 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PostList from '../components/PostList.astro';
+
+const all = (await getCollection('blog')).sort(
+  (a, b) => b.data.pubDate.getTime() - a.data.pubDate.getTime(),
+);
+const [featured, ...rest] = all;
+const yearOf = (p: typeof featured) =>
+  p.data.year ?? String(p.data.pubDate.getFullYear());
+---
+<BaseLayout title="Off The Records">
+  <div class="container-wide home">
+    {featured && (
+      <a class="featured" href={`/${featured.id}/`}>
+        {featured.data.heroImage && (
+          <div class="feat-img">
+            <img src={featured.data.heroImage} alt={featured.data.title} />
+          </div>
+        )}
+        <div class="feat-meta">
+          <span class="eyebrow">{yearOf(featured)}</span>
+          <h2>{featured.data.title}</h2>
+          {featured.data.description && (
+            <p class="feat-excerpt">{featured.data.description}</p>
+          )}
+        </div>
+      </a>
+    )}
+
+    <PostList posts={rest} />
+  </div>
+</BaseLayout>

@@ -1,0 +1,27 @@
+# build output
+dist/
+.astro/
+
+# cloudflare / wrangler
+.wrangler/
+.dev.vars
+.dev.vars.*
+
+# deps
+node_modules/
+
+# env / secrets
+.env
+.env.*
+
+# PII — subscriber export holds 1,000+ real email addresses. NEVER commit.
+*.csv
+thisweekinthe90s*.csv
+
+# PII / migration source — WordPress export embeds 41 commenter emails. NEVER commit.
+# Kept on local disk as the migration source of truth; not part of the deploy repo.
+*.WordPress.*.xml
+offtherecords.WordPress.2026-06-02.xml
+
+# os
+.DS_Store

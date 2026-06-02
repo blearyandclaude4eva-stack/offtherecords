@@ -1,0 +1,166 @@
+---
+// Client-only comments island. Fetches approved comments for the post and posts
+// new ones (held for moderation). Backed by /api/comments/[slug] (Pages Function
+// + D1). See docs/specs/active/comments.md.
+interface Props {
+  slug: string;
+}
+const { slug } = Astro.props;
+const sitekey = import.meta.env.PUBLIC_TURNSTILE_SITEKEY || '';
+---
+<section class="comments" aria-labelledby="comments-heading">
+  <h2 id="comments-heading" class="comments-heading">Comments</h2>
+
+  <ol class="comment-list" data-comment-list>
+    <li class="comment-empty" data-comment-status>Loading…</li>
+  </ol>
+
+  <form class="comment-form" data-comment-form novalidate>
+    <div class="cf-grid">
+      <label class="cf-field">
+        <span>Name</span>
+        <input type="text" name="author" maxlength="80" required autocomplete="name" />
+      </label>
+      <label class="cf-field">
+        <span>Email <em>(optional, never shown)</em></span>
+        <input type="email" name="email" autocomplete="email" />
+      </label>
+    </div>
+    <label class="cf-field">
+      <span>Comment</span>
+      <textarea name="body" rows="5" maxlength="5000" required></textarea>
+    </label>
+
+    {/* Honeypot: hidden from people, tempting to bots. */}
+    <input
+      class="cf-honeypot"
+      type="text"
+      name="website"
+      tabindex="-1"
+      autocomplete="off"
+      aria-hidden="true"
+    />
+
+    {sitekey && <div class="cf-turnstile" data-sitekey={sitekey}></div>}
+
+    <div class="cf-actions">
+      <button type="submit" data-comment-submit>Post comment</button>
+      <p class="cf-msg" data-comment-msg role="status" aria-live="polite"></p>
+    </div>
+  </form>
+</section>
+
+{sitekey && (
+  <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+)}
+
+<script define:vars={{ slug }}>
+  (function () {
+    const root = document.querySelector('.comments');
+    if (!root) return;
+    const list = root.querySelector('[data-comment-list]');
+    const form = root.querySelector('[data-comment-form]');
+    const msg = root.querySelector('[data-comment-msg]');
+    const submit = root.querySelector('[data-comment-submit]');
+    const api = `/api/comments/${encodeURIComponent(slug)}`;
+
+    const fmt = (ms) =>
+      new Date(ms).toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      });
+
+    function setStatus(text, kind) {
+      list.innerHTML = '';
+      const li = document.createElement('li');
+      li.className = 'comment-empty';
+      if (kind) li.dataset.kind = kind;
+      li.textContent = text;
+      list.appendChild(li);
+    }
+
+    function render(comments) {
+      list.innerHTML = '';
+      if (!comments.length) {
+        setStatus('No comments yet.');
+        return;
+      }
+      for (const c of comments) {
+        const li = document.createElement('li');
+        li.className = 'comment';
+
+        const head = document.createElement('p');
+        head.className = 'comment-head';
+        const who = document.createElement('span');
+        who.className = 'comment-author';
+        who.textContent = c.author;
+        const when = document.createElement('time');
+        when.className = 'comment-date';
+        when.textContent = fmt(c.created_at);
+        head.append(who, when);
+
+        const body = document.createElement('div');
+        body.className = 'comment-body';
+        // Plain text only — preserve line breaks, never inject HTML.
+        for (const [i, para] of String(c.body).split(/\n{2,}/).entries()) {
+          const p = document.createElement('p');
+          p.textContent = para;
+          body.appendChild(p);
+        }
+
+        li.append(head, body);
+        list.appendChild(li);
+      }
+    }
+
+    async function load() {
+      try {
+        const res = await fetch(api, { headers: { accept: 'application/json' } });
+        if (!res.ok) throw new Error('load failed');
+        const data = await res.json();
+        render(data.comments || []);
+      } catch {
+        setStatus('Comments could not load.', 'error');
+      }
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      msg.textContent = '';
+      const fd = new FormData(form);
+      const payload = {
+        author: fd.get('author'),
+        email: fd.get('email'),
+        body: fd.get('body'),
+        website: fd.get('website'), // honeypot
+        turnstileToken: fd.get('cf-turnstile-response') || '',
+      };
+      submit.disabled = true;
+      try {
+        const res = await fetch(api, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 202) {
+          form.reset();
+          if (window.turnstile) window.turnstile.reset();
+          msg.dataset.kind = 'ok';
+          msg.textContent = 'Thanks — your comment is awaiting moderation.';
+        } else {
+          msg.dataset.kind = 'error';
+          msg.textContent = data.error || 'Something went wrong.';
+        }
+      } catch {
+        msg.dataset.kind = 'error';
+        msg.textContent = 'Network error. Please try again.';
+      } finally {
+        submit.disabled = false;
+      }
+    });
+
+    load();
+  })();
+</script>

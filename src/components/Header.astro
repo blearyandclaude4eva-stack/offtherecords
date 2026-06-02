@@ -1,0 +1,24 @@
+---
+const links = [
+  { href: '/', label: 'Archive' },
+  { href: '/about/', label: 'About' },
+  { href: '/newsletter/', label: 'Newsletter' },
+];
+const path = Astro.url.pathname;
+---
+<header class="site-header">
+  <div class="container-wide header-inner">
+    <a class="brand" href="/">
+      <img class="brand-logo" src="/images/2024/09/off-the-records.png" alt="Off The Records" width="624" height="360" />
+      <span class="brand-text">
+        <span class="brand-name">Off The Records</span>
+        <span class="tagline">Stories about and inspired by UK Top 40 hits from 1975 to 1999</span>
+      </span>
+    </a>
+    <nav>
+      {links.map((l) => (
+        <a href={l.href} class={path === l.href ? 'active' : ''}>{l.label}</a>
+      ))}
+    </nav>
+  </div>
+</header>

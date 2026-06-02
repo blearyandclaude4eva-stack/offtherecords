@@ -1,0 +1,27 @@
+{
+  "name": "off-the-records",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Off The Records — static Astro rebuild of the WordPress blog",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "cf:dev": "wrangler pages dev",
+    "db:create": "wrangler d1 create off-the-records-comments",
+    "db:apply": "wrangler d1 execute off-the-records-comments --remote --file=db/schema.sql",
+    "db:apply:local": "wrangler d1 execute off-the-records-comments --local --file=db/schema.sql",
+    "db:seed:local": "wrangler d1 execute off-the-records-comments --local --file=db/seed.local.sql"
+  },
+  "dependencies": {
+    "@astrojs/rss": "^4.0.11",
+    "@astrojs/sitemap": "^3.2.1",
+    "@fontsource-variable/fraunces": "^5.2.9",
+    "astro": "^5.6.1"
+  },
+  "devDependencies": {
+    "wrangler": "^4.97.0"
+  }
+}

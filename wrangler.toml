@@ -1,0 +1,21 @@
+# Cloudflare Pages configuration for Off The Records.
+#
+# The site is a static Astro build (output dir `dist/`). Cloudflare Pages serves
+# that and auto-runs any Pages Functions in `functions/`. D1 is bound here so the
+# (planned) comments API can reach it. See docs/specs/active/comments.md.
+#
+# First-time setup (run once, then commit the printed database_id below):
+#   npx wrangler login
+#   npm run db:create          # prints a database_id — paste it below
+#   npm run db:apply           # applies db/schema.sql to the remote D1
+# Then connect this repo in the Cloudflare Pages dashboard (or `wrangler pages deploy dist`).
+
+name = "off-the-records"
+compatibility_date = "2026-06-01"
+pages_build_output_dir = "dist"
+
+# Comments database. database_id is filled in after `npm run db:create`.
+[[d1_databases]]
+binding = "DB"
+database_name = "off-the-records-comments"
+database_id = "0aa9612f-2df7-4be5-a954-5ae57ec08c53"
