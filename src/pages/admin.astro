@@ -1,0 +1,204 @@
+---
+// Comment moderation. Public route but useless without ADMIN_TOKEN — every action
+// is enforced server-side by the bearer token (functions/api/admin/comments.js).
+// The token is entered here and kept only in sessionStorage.
+import '../styles/global.css';
+---
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Moderation — Off The Records</title>
+  </head>
+  <body>
+    <main class="container admin">
+      <h1 class="admin-title">Comment moderation</h1>
+
+      <div class="admin-auth">
+        <input type="password" id="token" placeholder="Admin token" autocomplete="off" />
+        <button id="load" type="button">Load</button>
+        <span id="authmsg" class="admin-msg"></span>
+      </div>
+
+      <nav class="admin-tabs" hidden>
+        <button data-status="pending" class="active" type="button">Pending</button>
+        <button data-status="approved" type="button">Approved</button>
+        <button data-status="rejected" type="button">Rejected</button>
+      </nav>
+
+      <ol id="queue" class="admin-list"></ol>
+    </main>
+
+    <script>
+      const KEY = 'otr_admin_token';
+      const tokenInput = document.getElementById('token') as HTMLInputElement;
+      const loadBtn = document.getElementById('load') as HTMLButtonElement;
+      const authMsg = document.getElementById('authmsg') as HTMLElement;
+      const tabs = document.querySelector('.admin-tabs') as HTMLElement;
+      const queue = document.getElementById('queue') as HTMLOListElement;
+      let status = 'pending';
+
+      const token = () => tokenInput.value.trim();
+      const headers = () => ({ authorization: `Bearer ${token()}` });
+
+      const fmt = (ms: number) =>
+        new Date(ms).toLocaleString('en-GB', {
+          day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+        });
+
+      // Buttons available per tab.
+      const actionsFor = (s: string) =>
+        s === 'pending' ? [['approve', 'Approve'], ['reject', 'Reject']]
+        : s === 'approved' ? [['reject', 'Reject']]
+        : [['approve', 'Approve']];
+
+      function render(comments: any[]) {
+        queue.innerHTML = '';
+        if (!comments.length) {
+          const li = document.createElement('li');
+          li.className = 'admin-empty';
+          li.textContent = `No ${status} comments.`;
+          queue.appendChild(li);
+          return;
+        }
+        for (const c of comments) {
+          const li = document.createElement('li');
+          li.className = 'admin-item';
+
+          const meta = document.createElement('p');
+          meta.className = 'admin-meta';
+          const who = document.createElement('strong');
+          who.textContent = c.author;
+          const on = document.createElement('span');
+          on.textContent = ` · ${fmt(c.created_at)} · `;
+          const link = document.createElement('a');
+          link.href = `/${c.slug}/`;
+          link.target = '_blank';
+          link.rel = 'noopener';
+          link.textContent = c.slug;
+          meta.append(who, on, link);
+          if (c.parent_id != null) {
+            const reply = document.createElement('span');
+            reply.className = 'admin-reply';
+            reply.textContent = ` · reply to #${c.parent_id}`;
+            meta.appendChild(reply);
+          }
+
+          const body = document.createElement('div');
+          body.className = 'admin-body';
+          for (const para of String(c.body).split(/\n{2,}/)) {
+            const p = document.createElement('p');
+            p.textContent = para;
+            body.appendChild(p);
+          }
+
+          const actions = document.createElement('div');
+          actions.className = 'admin-actions';
+          for (const [action, label] of actionsFor(status)) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = label;
+            btn.dataset.action = action;
+            btn.addEventListener('click', () => moderate(c.id, action, li));
+            actions.appendChild(btn);
+          }
+
+          li.append(meta, body, actions);
+          queue.appendChild(li);
+        }
+      }
+
+      async function loadList() {
+        if (!token()) {
+          authMsg.textContent = 'Enter your admin token.';
+          return;
+        }
+        authMsg.textContent = 'Loading…';
+        try {
+          const res = await fetch(`/api/admin/comments?status=${status}`, { headers: headers() });
+          if (res.status === 401) {
+            authMsg.dataset.kind = 'error';
+            authMsg.textContent = 'Invalid token.';
+            tabs.hidden = true;
+            queue.innerHTML = '';
+            return;
+          }
+          if (!res.ok) throw new Error('load failed');
+          const data = await res.json();
+          sessionStorage.setItem(KEY, token());
+          authMsg.dataset.kind = 'ok';
+          authMsg.textContent = `${data.comments.length} ${status}`;
+          tabs.hidden = false;
+          render(data.comments);
+        } catch {
+          authMsg.dataset.kind = 'error';
+          authMsg.textContent = 'Could not load.';
+        }
+      }
+
+      async function moderate(id: number, action: string, li: HTMLElement) {
+        li.style.opacity = '0.5';
+        try {
+          const res = await fetch('/api/admin/comments', {
+            method: 'POST',
+            headers: { ...headers(), 'content-type': 'application/json' },
+            body: JSON.stringify({ id, action }),
+          });
+          if (!res.ok) throw new Error('action failed');
+          li.remove();
+          if (!queue.querySelector('.admin-item')) loadList(); // refresh count / empty state
+        } catch {
+          li.style.opacity = '1';
+          authMsg.dataset.kind = 'error';
+          authMsg.textContent = 'Action failed.';
+        }
+      }
+
+      loadBtn.addEventListener('click', loadList);
+      tokenInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') loadList(); });
+      tabs.addEventListener('click', (e) => {
+        const btn = (e.target as HTMLElement).closest('button[data-status]') as HTMLElement | null;
+        if (!btn) return;
+        status = btn.dataset.status;
+        for (const b of tabs.querySelectorAll('button')) b.classList.toggle('active', b === btn);
+        loadList();
+      });
+
+      // Restore a token from this session for convenience.
+      const saved = sessionStorage.getItem(KEY);
+      if (saved) { tokenInput.value = saved; loadList(); }
+    </script>
+
+    <style is:global>
+      .admin { padding-top: 3rem; padding-bottom: 5rem; }
+      .admin-title { font-family: var(--display); font-weight: 600; font-size: 2rem; letter-spacing: -0.02em; margin: 0 0 1.5rem; }
+      .admin-auth { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; margin-bottom: 1.5rem; }
+      .admin-auth input { font-family: var(--sans); font-size: 1rem; padding: 0.55rem 0.7rem; border: 1px solid var(--rule-strong); min-width: 18rem; }
+      .admin-auth button, .admin-actions button {
+        font-family: var(--sans); font-weight: 600; font-size: 0.85rem; color: #fff;
+        background: var(--accent); border: 0; padding: 0.55rem 1.1rem; cursor: pointer;
+      }
+      .admin-auth button:hover, .admin-actions button:hover { background: var(--accent-dark); }
+      .admin-msg { font-family: var(--sans); font-size: 0.85rem; color: var(--muted); }
+      .admin-msg[data-kind='error'] { color: var(--accent-hot); }
+      .admin-msg[data-kind='ok'] { color: var(--accent-dark); }
+      .admin-tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--rule-strong); }
+      .admin-tabs button {
+        font-family: var(--sans); font-size: 0.85rem; font-weight: 600; background: none; border: 0;
+        border-bottom: 2px solid transparent; padding: 0.5rem 0.75rem; cursor: pointer; color: var(--muted);
+      }
+      .admin-tabs button.active { color: var(--accent); border-bottom-color: var(--accent); }
+      .admin-list { list-style: none; margin: 0; padding: 0; }
+      .admin-item { padding: 1.1rem 0; border-bottom: 1px solid var(--rule); }
+      .admin-meta { font-family: var(--sans); font-size: 0.85rem; color: var(--muted); margin: 0 0 0.4rem; }
+      .admin-reply { color: var(--accent); }
+      .admin-body { font-size: 1.02rem; }
+      .admin-body p { margin: 0.3rem 0; }
+      .admin-actions { display: flex; gap: 0.5rem; margin-top: 0.7rem; }
+      .admin-actions button[data-action='reject'] { background: var(--accent-hot); }
+      .admin-empty { font-family: var(--sans); color: var(--muted); padding: 1rem 0; }
+    </style>
+  </body>
+</html>
