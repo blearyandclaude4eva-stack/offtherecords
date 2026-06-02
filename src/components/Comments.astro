@@ -80,38 +80,56 @@ const sitekey = import.meta.env.PUBLIC_TURNSTILE_SITEKEY || '';
       list.appendChild(li);
     }
 
+    function buildCommentEl(node) {
+      const li = document.createElement('li');
+      li.className = 'comment';
+
+      const head = document.createElement('p');
+      head.className = 'comment-head';
+      const who = document.createElement('span');
+      who.className = 'comment-author';
+      who.textContent = node.author;
+      const when = document.createElement('time');
+      when.className = 'comment-date';
+      when.textContent = fmt(node.created_at);
+      head.append(who, when);
+
+      const body = document.createElement('div');
+      body.className = 'comment-body';
+      // Plain text only — preserve line breaks, never inject HTML.
+      for (const para of String(node.body).split(/\n{2,}/)) {
+        const p = document.createElement('p');
+        p.textContent = para;
+        body.appendChild(p);
+      }
+
+      li.append(head, body);
+
+      if (node.children.length) {
+        const replies = document.createElement('ol');
+        replies.className = 'comment-replies';
+        for (const child of node.children) replies.appendChild(buildCommentEl(child));
+        li.appendChild(replies);
+      }
+      return li;
+    }
+
     function render(comments) {
       list.innerHTML = '';
       if (!comments.length) {
         setStatus('No comments yet.');
         return;
       }
-      for (const c of comments) {
-        const li = document.createElement('li');
-        li.className = 'comment';
-
-        const head = document.createElement('p');
-        head.className = 'comment-head';
-        const who = document.createElement('span');
-        who.className = 'comment-author';
-        who.textContent = c.author;
-        const when = document.createElement('time');
-        when.className = 'comment-date';
-        when.textContent = fmt(c.created_at);
-        head.append(who, when);
-
-        const body = document.createElement('div');
-        body.className = 'comment-body';
-        // Plain text only — preserve line breaks, never inject HTML.
-        for (const [i, para] of String(c.body).split(/\n{2,}/).entries()) {
-          const p = document.createElement('p');
-          p.textContent = para;
-          body.appendChild(p);
-        }
-
-        li.append(head, body);
-        list.appendChild(li);
+      // Build a tree from the flat, time-ordered list using parent_id.
+      const byId = new Map();
+      for (const c of comments) byId.set(c.id, { ...c, children: [] });
+      const roots = [];
+      for (const node of byId.values()) {
+        const parent = node.parent_id != null ? byId.get(node.parent_id) : null;
+        if (parent) parent.children.push(node);
+        else roots.push(node);
       }
+      for (const root of roots) list.appendChild(buildCommentEl(root));
     }
 
     async function load() {

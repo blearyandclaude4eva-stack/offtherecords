@@ -175,6 +175,12 @@ img { max-width: 100%; height: auto; }
 .comment-empty { font-family: var(--sans); font-size: 0.92rem; color: var(--muted); }
 .comment-empty[data-kind='error'] { color: var(--accent-hot); }
 
+/* Nested replies */
+.comment-replies { list-style: none; margin: 1rem 0 0; padding: 0 0 0 1.3rem; border-left: 2px solid var(--rule-strong); }
+.comment-replies .comment { padding: 0.9rem 0; border-bottom: none; }
+.comment-replies .comment:first-child { padding-top: 0; }
+.comment-replies .comment-author::before { content: '\21B3 '; color: var(--muted); }
+
 .comment-form { display: grid; gap: 1rem; max-width: 38rem; }
 .cf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 .cf-field { display: flex; flex-direction: column; gap: 0.3rem; font-family: var(--sans); font-size: 0.8rem; font-weight: 600; color: var(--ink-soft); }
