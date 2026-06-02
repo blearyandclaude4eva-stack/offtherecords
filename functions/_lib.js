@@ -11,6 +11,10 @@ export function json(data, status = 200, extra = {}) {
   });
 }
 
+export function isEmail(s) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s) && s.length <= 254;
+}
+
 export async function sha256hex(input) {
   const bytes = new TextEncoder().encode(input);
   const digest = await crypto.subtle.digest('SHA-256', bytes);

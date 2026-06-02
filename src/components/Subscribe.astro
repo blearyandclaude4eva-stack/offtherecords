@@ -1,0 +1,81 @@
+---
+// Email capture. Posts to /api/subscribe (Pages Function + D1). Copy is the
+// original site's verbatim. See specs/active/newsletter-capture.md.
+interface Props {
+  source?: string;
+}
+const { source = 'site' } = Astro.props;
+const sitekey = import.meta.env.PUBLIC_TURNSTILE_SITEKEY || '';
+---
+<form class="subscribe" data-subscribe data-source={source}>
+  <p class="sub-head"><strong>Send this to your inbox?</strong></p>
+  <div class="sub-row">
+    <label class="sr-only" for={`sub-${source}`}>Your email here…</label>
+    <input
+      id={`sub-${source}`}
+      type="email"
+      name="email"
+      placeholder="Your email here..."
+      autocomplete="email"
+      required
+    />
+    <button type="submit">Sign me up</button>
+  </div>
+
+  {/* Honeypot: hidden from people, tempting to bots. */}
+  <input
+    class="cf-honeypot"
+    type="text"
+    name="website"
+    tabindex="-1"
+    autocomplete="off"
+    aria-hidden="true"
+  />
+
+  {sitekey && <div class="cf-turnstile" data-sitekey={sitekey}></div>}
+
+  <p class="sub-msg" data-sub-msg role="status" aria-live="polite"></p>
+</form>
+
+<script>
+  for (const form of document.querySelectorAll('[data-subscribe]')) {
+    const f = form as HTMLFormElement;
+    const msg = f.querySelector('[data-sub-msg]') as HTMLElement;
+    const btn = f.querySelector('button[type="submit"]') as HTMLButtonElement;
+
+    f.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      msg.textContent = '';
+      const fd = new FormData(f);
+      const payload = {
+        email: fd.get('email'),
+        website: fd.get('website'), // honeypot
+        source: f.dataset.source,
+        turnstileToken: fd.get('cf-turnstile-response') || '',
+      };
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/subscribe', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 202) {
+          f.reset();
+          if ((window as any).turnstile) (window as any).turnstile.reset();
+          msg.dataset.kind = 'ok';
+          msg.textContent = 'Thanks — you’re on the list.';
+        } else {
+          msg.dataset.kind = 'error';
+          msg.textContent = data.error || 'Something went wrong.';
+        }
+      } catch {
+        msg.dataset.kind = 'error';
+        msg.textContent = 'Network error. Please try again.';
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
+</script>

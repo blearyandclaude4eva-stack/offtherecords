@@ -20,3 +20,15 @@ CREATE INDEX IF NOT EXISTS idx_comments_slug_status
 -- Moderation queue.
 CREATE INDEX IF NOT EXISTS idx_comments_status
   ON comments (status, created_at);
+
+-- Newsletter subscribers. Raw email is stored (a sender needs the real address);
+-- this PII lives only in D1, never in the repo. See specs/active/newsletter-capture.md.
+CREATE TABLE IF NOT EXISTS subscribers (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  email       TEXT    NOT NULL UNIQUE,
+  status      TEXT    NOT NULL DEFAULT 'active',   -- active | unsubscribed
+  source      TEXT,                                -- where they signed up
+  created_at  INTEGER NOT NULL                     -- unix epoch ms
+);
+CREATE INDEX IF NOT EXISTS idx_subscribers_status
+  ON subscribers (status, created_at);

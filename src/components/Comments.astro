@@ -50,10 +50,6 @@ const sitekey = import.meta.env.PUBLIC_TURNSTILE_SITEKEY || '';
   </form>
 </section>
 
-{sitekey && (
-  <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-)}
-
 <script define:vars={{ slug }}>
   (function () {
     const root = document.querySelector('.comments');
