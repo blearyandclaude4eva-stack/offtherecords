@@ -2,6 +2,7 @@
 import { getCollection, render } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Comments from '../components/Comments.astro';
+import Subscribe from '../components/Subscribe.astro';
 
 export async function getStaticPaths() {
   const posts = await getCollection('blog');
@@ -122,6 +123,11 @@ const year = data.year ?? (data.pubDate ? String(data.pubDate.getFullYear()) : u
       <div class="prose">
         <Content />
       </div>
+      {entry.id === 'newsletter' && (
+        <div class="newsletter-signup">
+          <Subscribe source="newsletter-page" />
+        </div>
+      )}
       <p class="back"><a href="/">&larr; Archive</a></p>
     </div>
   )}
