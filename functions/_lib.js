@@ -48,7 +48,7 @@ export async function verifyTurnstile(env, token, ip) {
   if (!env.TURNSTILE_SECRET) return true; // not configured → skip (prototype)
   if (!token) return false;
   const form = new FormData();
-  form.append('secret', env.TURNSTILE_SECRET);
+  form.append('secret', env.TURNSTILE_SECRET.trim());
   form.append('response', token);
   if (ip) form.append('remoteip', ip);
   try {
@@ -66,7 +66,7 @@ export async function verifyTurnstile(env, token, ip) {
 // Salted hash of an IP for rate limiting. Raw IPs are never stored. Falls back
 // to a constant when no IP header is present so the limit still groups them.
 export async function ipHash(env, ip) {
-  const salt = env.IP_SALT || 'otr-default-salt';
+  const salt = (env.IP_SALT || 'otr-default-salt').trim();
   return sha256hex(`${salt}:${ip || 'unknown'}`);
 }
 
@@ -86,5 +86,5 @@ export function isAdmin(request, env) {
   if (!env.ADMIN_TOKEN) return false;
   const auth = request.headers.get('authorization') || '';
   const m = auth.match(/^Bearer\s+(.+)$/i);
-  return Boolean(m) && m[1] === env.ADMIN_TOKEN;
+  return Boolean(m) && m[1] === env.ADMIN_TOKEN.trim();
 }

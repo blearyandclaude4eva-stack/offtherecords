@@ -15,10 +15,10 @@ const fullTitle = title === siteName ? title : `${title} — ${siteName}`;
 const desc = description ?? 'Stories about and inspired by UK Top 40 hits from 1975 to 1999.';
 const canonical = new URL(Astro.url.pathname, Astro.site);
 // Turnstile powers both the comment and subscribe forms — load its script once.
-const turnstileSitekey = import.meta.env.PUBLIC_TURNSTILE_SITEKEY || '';
+const turnstileSitekey = (import.meta.env.PUBLIC_TURNSTILE_SITEKEY || '').trim();
 // Cloudflare Web Analytics (cookieless RUM). Beacon only loads when the token is
 // set, so local builds without it stay clean. See docs/specs/active/analytics.md.
-const cfBeaconToken = import.meta.env.PUBLIC_CF_BEACON_TOKEN || '';
+const cfBeaconToken = (import.meta.env.PUBLIC_CF_BEACON_TOKEN || '').trim();
 ---
 <!doctype html>
 <html lang="en-GB">

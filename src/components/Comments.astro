@@ -6,7 +6,9 @@ interface Props {
   slug: string;
 }
 const { slug } = Astro.props;
-const sitekey = import.meta.env.PUBLIC_TURNSTILE_SITEKEY || '';
+// .trim() guards against stray whitespace/newline in the env var, which would
+// otherwise render an invalid sitekey and the widget would issue no token.
+const sitekey = (import.meta.env.PUBLIC_TURNSTILE_SITEKEY || '').trim();
 ---
 <section class="comments" aria-labelledby="comments-heading">
   <h2 id="comments-heading" class="comments-heading">Comments</h2>

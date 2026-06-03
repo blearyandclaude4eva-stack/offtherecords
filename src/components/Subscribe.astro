@@ -5,7 +5,9 @@ interface Props {
   source?: string;
 }
 const { source = 'site' } = Astro.props;
-const sitekey = import.meta.env.PUBLIC_TURNSTILE_SITEKEY || '';
+// .trim() guards against stray whitespace/newline in the env var, which would
+// otherwise render an invalid sitekey and the widget would issue no token.
+const sitekey = (import.meta.env.PUBLIC_TURNSTILE_SITEKEY || '').trim();
 ---
 <form class="subscribe" data-subscribe data-source={source}>
   <p class="sub-head"><strong>Send this to your inbox?</strong></p>
