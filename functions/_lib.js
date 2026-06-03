@@ -4,6 +4,10 @@
 export const MAX_AUTHOR = 80;
 export const MAX_BODY = 5000;
 
+// Per-IP rate limiting for comment posting.
+export const RATE_LIMIT_MAX = 5; // max comments per window per IP
+export const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
+
 export function json(data, status = 200, extra = {}) {
   return new Response(JSON.stringify(data), {
     status,
@@ -57,6 +61,24 @@ export async function verifyTurnstile(env, token, ip) {
   } catch {
     return false;
   }
+}
+
+// Salted hash of an IP for rate limiting. Raw IPs are never stored. Falls back
+// to a constant when no IP header is present so the limit still groups them.
+export async function ipHash(env, ip) {
+  const salt = env.IP_SALT || 'otr-default-salt';
+  return sha256hex(`${salt}:${ip || 'unknown'}`);
+}
+
+// True if this ip_hash has posted >= RATE_LIMIT_MAX comments in the window.
+export async function isRateLimited(env, hash) {
+  const since = Date.now() - RATE_LIMIT_WINDOW_MS;
+  const row = await env.DB.prepare(
+    `SELECT COUNT(*) AS n FROM comments WHERE ip_hash = ?1 AND created_at >= ?2`,
+  )
+    .bind(hash, since)
+    .first();
+  return (row?.n ?? 0) >= RATE_LIMIT_MAX;
 }
 
 // Constant-time-ish check that the request carries the admin bearer token.

@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS comments (
   body        TEXT    NOT NULL,
   status      TEXT    NOT NULL DEFAULT 'pending',     -- pending | approved | spam
   parent_id   INTEGER,                                -- one level of threading; NULL = top-level
+  ip_hash     TEXT,                                   -- sha256(IP_SALT + ip); raw IP never stored, rate-limit only
   created_at  INTEGER NOT NULL                        -- unix epoch ms
 );
 
@@ -20,6 +21,10 @@ CREATE INDEX IF NOT EXISTS idx_comments_slug_status
 -- Moderation queue.
 CREATE INDEX IF NOT EXISTS idx_comments_status
   ON comments (status, created_at);
+
+-- Per-IP rate limiting: recent comments by ip_hash.
+CREATE INDEX IF NOT EXISTS idx_comments_ip_hash
+  ON comments (ip_hash, created_at);
 
 -- Newsletter subscribers. Raw email is stored (a sender needs the real address);
 -- this PII lives only in D1, never in the repo. See specs/active/newsletter-capture.md.
