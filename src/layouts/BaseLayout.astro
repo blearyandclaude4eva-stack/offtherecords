@@ -16,6 +16,9 @@ const desc = description ?? 'Stories about and inspired by UK Top 40 hits from 1
 const canonical = new URL(Astro.url.pathname, Astro.site);
 // Turnstile powers both the comment and subscribe forms — load its script once.
 const turnstileSitekey = import.meta.env.PUBLIC_TURNSTILE_SITEKEY || '';
+// Cloudflare Web Analytics (cookieless RUM). Beacon only loads when the token is
+// set, so local builds without it stay clean. See docs/specs/active/analytics.md.
+const cfBeaconToken = import.meta.env.PUBLIC_CF_BEACON_TOKEN || '';
 ---
 <!doctype html>
 <html lang="en-GB">
@@ -33,6 +36,14 @@ const turnstileSitekey = import.meta.env.PUBLIC_TURNSTILE_SITEKEY || '';
     <meta name="generator" content={Astro.generator} />
     {turnstileSitekey && (
       <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    )}
+    {cfBeaconToken && (
+      <script
+        is:inline
+        defer
+        src="https://static.cloudflareinsights.com/beacon.min.js"
+        data-cf-beacon={JSON.stringify({ token: cfBeaconToken })}
+      ></script>
     )}
   </head>
   <body>
