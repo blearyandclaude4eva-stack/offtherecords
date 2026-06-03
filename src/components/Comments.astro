@@ -16,6 +16,10 @@ const sitekey = import.meta.env.PUBLIC_TURNSTILE_SITEKEY || '';
   </ol>
 
   <form class="comment-form" data-comment-form novalidate>
+    <p class="cf-reply-banner" data-reply-banner hidden>
+      <span>Replying to <strong data-reply-to></strong></span>
+      <button type="button" data-reply-cancel>Cancel reply</button>
+    </p>
     <div class="cf-grid">
       <label class="cf-field">
         <span>Name</span>
@@ -58,7 +62,29 @@ const sitekey = import.meta.env.PUBLIC_TURNSTILE_SITEKEY || '';
     const form = root.querySelector('[data-comment-form]');
     const msg = root.querySelector('[data-comment-msg]');
     const submit = root.querySelector('[data-comment-submit]');
+    const banner = root.querySelector('[data-reply-banner]');
+    const replyToName = root.querySelector('[data-reply-to]');
+    const replyCancel = root.querySelector('[data-reply-cancel]');
     const api = `/api/comments/${encodeURIComponent(slug)}`;
+
+    // Threading is one level deep: a reply's parent is normalised to the
+    // top-level ancestor so replies-to-replies don't deepen the tree.
+    let replyParentId = null;
+
+    function resetReply() {
+      replyParentId = null;
+      banner.hidden = true;
+      replyToName.textContent = '';
+      root.appendChild(form); // back to its natural spot below the list
+    }
+
+    function startReply(parentId, author, li) {
+      replyParentId = parentId;
+      replyToName.textContent = author;
+      banner.hidden = false;
+      li.appendChild(form); // relocate the single form under the target comment
+      form.querySelector('[name="author"]').focus();
+    }
 
     const fmt = (ms) =>
       new Date(ms).toLocaleDateString('en-GB', {
@@ -99,7 +125,19 @@ const sitekey = import.meta.env.PUBLIC_TURNSTILE_SITEKEY || '';
         body.appendChild(p);
       }
 
-      li.append(head, body);
+      const actions = document.createElement('p');
+      actions.className = 'comment-actions';
+      const replyBtn = document.createElement('button');
+      replyBtn.type = 'button';
+      replyBtn.className = 'comment-reply-btn';
+      replyBtn.textContent = 'Reply';
+      // One level deep: replying to a reply attaches to its top-level ancestor.
+      replyBtn.addEventListener('click', () => {
+        const parentId = node.parent_id != null ? node.parent_id : node.id;
+        startReply(parentId, node.author, li);
+      });
+      actions.appendChild(replyBtn);
+      li.append(head, body, actions);
 
       if (node.children.length) {
         const replies = document.createElement('ol');
@@ -139,6 +177,8 @@ const sitekey = import.meta.env.PUBLIC_TURNSTILE_SITEKEY || '';
       }
     }
 
+    replyCancel.addEventListener('click', resetReply);
+
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       msg.textContent = '';
@@ -147,6 +187,7 @@ const sitekey = import.meta.env.PUBLIC_TURNSTILE_SITEKEY || '';
         author: fd.get('author'),
         email: fd.get('email'),
         body: fd.get('body'),
+        parent_id: replyParentId,
         website: fd.get('website'), // honeypot
         turnstileToken: fd.get('cf-turnstile-response') || '',
       };
@@ -160,6 +201,7 @@ const sitekey = import.meta.env.PUBLIC_TURNSTILE_SITEKEY || '';
         const data = await res.json().catch(() => ({}));
         if (res.status === 202) {
           form.reset();
+          resetReply();
           if (window.turnstile) window.turnstile.reset();
           msg.dataset.kind = 'ok';
           msg.textContent = 'Thanks — your comment is awaiting moderation.';

@@ -181,6 +181,26 @@ img { max-width: 100%; height: auto; }
 .comment-replies .comment:first-child { padding-top: 0; }
 .comment-replies .comment-author::before { content: '\21B3 '; color: var(--muted); }
 
+/* Reply action (subtle text button, distinct from the filled form button) */
+.comment-actions { margin: 0.5rem 0 0; }
+.comment-reply-btn {
+  font-family: var(--sans); font-weight: 600; font-size: 0.78rem; letter-spacing: 0.02em;
+  color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer;
+}
+.comment-reply-btn:hover { color: var(--accent-dark); text-decoration: underline; }
+
+/* "Replying to X" banner above the relocated form */
+.cf-reply-banner {
+  display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+  font-family: var(--sans); font-size: 0.85rem; color: var(--ink-soft); margin: 0;
+  padding: 0.5rem 0.7rem; background: var(--rule); border-left: 3px solid var(--accent);
+}
+.comment-form button[data-reply-cancel] {
+  color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer;
+  font-size: 0.8rem; text-decoration: underline;
+}
+.comment-form button[data-reply-cancel]:hover { color: var(--accent-dark); background: none; }
+
 .comment-form { display: grid; gap: 1rem; max-width: 38rem; }
 .cf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 .cf-field { display: flex; flex-direction: column; gap: 0.3rem; font-family: var(--sans); font-size: 0.8rem; font-weight: 600; color: var(--ink-soft); }
