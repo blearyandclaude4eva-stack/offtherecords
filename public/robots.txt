@@ -1,0 +1,4 @@
+# Cloudflare appends its managed AI-bot block below this content on deploy.
+# This file exists to advertise the sitemap to crawlers.
+
+Sitemap: https://off-the-records.com/sitemap-index.xml
