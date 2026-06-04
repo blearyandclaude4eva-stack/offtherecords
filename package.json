@@ -9,6 +9,7 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
+    "gen:webp": "node scripts/gen-hero-webp.mjs",
     "cf:dev": "wrangler pages dev",
     "db:create": "wrangler d1 create off-the-records-comments",
     "db:apply": "wrangler d1 execute off-the-records-comments --remote --file=db/schema.sql",
@@ -23,6 +24,7 @@
   },
   "devDependencies": {
     "image-size": "^2.0.2",
+    "sharp": "^0.34.5",
     "wrangler": "^4.97.0"
   }
 }

@@ -16,6 +16,11 @@ workshop at `~/Data/Projects/off-the-records/` and are not part of this repo.
 | `npm run dev`     | Local dev server at `localhost:4321`        |
 | `npm run build`   | Build static site to `./dist/`              |
 | `npm run preview` | Preview the production build locally        |
+| `npm run gen:webp`| Generate committed WebP versions of post hero images |
+
+> After adding a post with a new `heroImage`, run `npm run gen:webp` and commit the
+> generated `.webp` so the hero is served as WebP (smaller LCP fetch). Heroes are
+> rendered via `<picture>` with the original as fallback.
 
 ## Structure
 

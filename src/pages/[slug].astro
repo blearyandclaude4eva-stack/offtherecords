@@ -1,6 +1,6 @@
 ---
 import { getCollection, render } from 'astro:content';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { imageSize } from 'image-size';
 import BaseLayout from '../layouts/BaseLayout.astro';
@@ -51,7 +51,10 @@ const year = data.year ?? (data.pubDate ? String(data.pubDate.getFullYear()) : u
 // Read the hero's intrinsic dimensions at build time so the <img> can carry
 // explicit width/height (clears the Lighthouse audit; CSS still controls render).
 // Heroes are static files under public/; degrade gracefully if one can't be read.
+// Also pick up a committed .webp sibling (see scripts/gen-hero-webp.mjs) for a
+// smaller LCP fetch — served via <picture> with the original as the fallback.
 let heroDims: { width: number; height: number } | undefined;
+let heroWebp: string | undefined;
 if (kind === 'post' && data.heroImage) {
   try {
     const buf = readFileSync(path.join(process.cwd(), 'public', data.heroImage));
@@ -60,25 +63,39 @@ if (kind === 'post' && data.heroImage) {
   } catch {
     // No dimensions — fall back to an attribute-less hero rather than failing the build.
   }
+  if (!/\.webp$/i.test(data.heroImage)) {
+    const webpPath = data.heroImage.replace(/\.(jpe?g|png)$/i, '.webp');
+    if (webpPath !== data.heroImage &&
+        existsSync(path.join(process.cwd(), 'public', webpPath))) {
+      heroWebp = webpPath;
+    }
+  }
 }
+// Preload the format the browser will actually use (WebP when available).
+const heroPreload = kind === 'post' ? (heroWebp ?? data.heroImage) : undefined;
+const heroPreloadType = heroWebp ? 'image/webp' : undefined;
 ---
 <BaseLayout
   title={data.title}
   description={data.description}
-  preloadImage={kind === 'post' ? data.heroImage : undefined}
+  preloadImage={heroPreload}
+  preloadImageType={heroPreloadType}
 >
   {kind === 'post' ? (
     <article class="post">
       {data.heroImage ? (
         <div class="post-hero full-bleed has-overlay">
-          <img
-            src={data.heroImage}
-            alt={data.title}
-            width={heroDims?.width}
-            height={heroDims?.height}
-            fetchpriority="high"
-            decoding="async"
-          />
+          <picture>
+            {heroWebp && <source type="image/webp" srcset={heroWebp} />}
+            <img
+              src={data.heroImage}
+              alt={data.title}
+              width={heroDims?.width}
+              height={heroDims?.height}
+              fetchpriority="high"
+              decoding="async"
+            />
+          </picture>
           <div class="hero-scrim"></div>
           <div class="hero-caption">
             <div class="container">
