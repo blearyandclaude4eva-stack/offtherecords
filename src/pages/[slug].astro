@@ -1,5 +1,8 @@
 ---
 import { getCollection, render } from 'astro:content';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { imageSize } from 'image-size';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Comments from '../components/Comments.astro';
 import Subscribe from '../components/Subscribe.astro';
@@ -44,13 +47,38 @@ const data = entry.data as typeof entry.data & {
 };
 const hasChart = Boolean(data.artist || data.song || data.chartPosition);
 const year = data.year ?? (data.pubDate ? String(data.pubDate.getFullYear()) : undefined);
+
+// Read the hero's intrinsic dimensions at build time so the <img> can carry
+// explicit width/height (clears the Lighthouse audit; CSS still controls render).
+// Heroes are static files under public/; degrade gracefully if one can't be read.
+let heroDims: { width: number; height: number } | undefined;
+if (kind === 'post' && data.heroImage) {
+  try {
+    const buf = readFileSync(path.join(process.cwd(), 'public', data.heroImage));
+    const { width, height } = imageSize(buf);
+    if (width && height) heroDims = { width, height };
+  } catch {
+    // No dimensions — fall back to an attribute-less hero rather than failing the build.
+  }
+}
 ---
-<BaseLayout title={data.title} description={data.description}>
+<BaseLayout
+  title={data.title}
+  description={data.description}
+  preloadImage={kind === 'post' ? data.heroImage : undefined}
+>
   {kind === 'post' ? (
     <article class="post">
       {data.heroImage ? (
         <div class="post-hero full-bleed has-overlay">
-          <img src={data.heroImage} alt={data.title} />
+          <img
+            src={data.heroImage}
+            alt={data.title}
+            width={heroDims?.width}
+            height={heroDims?.height}
+            fetchpriority="high"
+            decoding="async"
+          />
           <div class="hero-scrim"></div>
           <div class="hero-caption">
             <div class="container">

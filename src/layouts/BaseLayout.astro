@@ -8,8 +8,10 @@ import Footer from '../components/Footer.astro';
 interface Props {
   title: string;
   description?: string;
+  /** Hero/LCP image to preload at high priority (post pages only). */
+  preloadImage?: string;
 }
-const { title, description } = Astro.props;
+const { title, description, preloadImage } = Astro.props;
 const siteName = 'Off The Records';
 const fullTitle = title === siteName ? title : `${title} — ${siteName}`;
 const desc = description ?? 'Stories about and inspired by UK Top 40 hits from 1975 to 1999.';
@@ -28,6 +30,9 @@ const cfBeaconToken = (import.meta.env.PUBLIC_CF_BEACON_TOKEN || '').trim();
     <title>{fullTitle}</title>
     <meta name="description" content={desc} />
     <link rel="canonical" href={canonical} />
+    {preloadImage && (
+      <link rel="preload" as="image" href={preloadImage} fetchpriority="high" />
+    )}
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={desc} />
     <meta property="og:type" content="website" />
